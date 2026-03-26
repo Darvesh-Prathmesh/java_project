@@ -1,0 +1,12 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Run Event Management",
+            "request": "launch",
+            "mainClass": "eventmanagement.Main",
+            "vmArgs": "--module-path \"${workspaceFolder}/lib/javafx-sdk-17.0.10/lib\" --add-modules javafx.controls,javafx.fxml"
+        }
+    ]
+}
