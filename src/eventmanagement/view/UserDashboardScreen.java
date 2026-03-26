@@ -12,6 +12,8 @@ import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
 
 import java.time.LocalDate;
@@ -22,477 +24,420 @@ import java.util.stream.Collectors;
 public class UserDashboardScreen {
     private Stage stage;
     private EventDAO eventDAO = new EventDAO();
-    private YearMonth currentYearMonth;
-    private GridPane calendarGrid;
-    private FlowPane browseContainer;
+    private YearMonth currentYearMonth = YearMonth.now();
     private BorderPane root;
     private String activeView = "browse";
+    private GridPane calendarGrid;
+    private FlowPane browsePane;
 
-    // ---- Design System ----
-    private static final String BG      = "-fx-background-color: #12121A;";
-    private static final String SIDEBAR  = "-fx-background-color: #1C1C28;";
-    private static final String CARD     = "-fx-background-color: #1E1E2E; -fx-background-radius: 18; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.6), 14, 0, 0, 6);";
-    private static final String BTN_PRI  = "-fx-background-color: linear-gradient(to right, #8E24AA, #D500F9); -fx-text-fill: white; -fx-background-radius: 12; -fx-padding: 10 16; -fx-font-weight: bold; -fx-cursor: hand;";
-    private static final String TXT_W    = "-fx-text-fill: white; -fx-font-family: 'Segoe UI', sans-serif;";
+    // ── Design Tokens ──────────────────────────────────────────────
+    private static final String APP_BG    = "#F0F4F8";
+    private static final String WHITE     = "#FFFFFF";
+    private static final String BLUE      = "#2563EB";
+    private static final String BLUE_DRK  = "#1D4ED8";
+    private static final String BLUE_LITE = "#EFF6FF";
+    private static final String SIDEBAR_GRAD = "linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%)";
+    private static final String TEXT_PRI  = "#1E293B";
+    private static final String TEXT_SEC  = "#64748B";
+    private static final String BORDER    = "#E2E8F0";
+    private static final String CARD_SHADOW = "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.07), 12, 0, 0, 4);";
+    private static final String GREEN     = "#16A34A";
+    private static final String RED_SOFT  = "#DC2626";
 
-    public UserDashboardScreen(Stage stage) {
-        this.stage = stage;
-        this.currentYearMonth = YearMonth.now();
-    }
+    private final String BTN_PRIMARY =
+        "-fx-background-color: " + BLUE + "; -fx-text-fill: white; -fx-font-weight: bold; " +
+        "-fx-font-size: 13px; -fx-background-radius: 20; -fx-padding: 10 20; -fx-cursor: hand;";
+    private final String FIELD_STYLE =
+        "-fx-background-color: " + WHITE + "; -fx-border-color: " + BORDER + "; -fx-border-radius: 10; " +
+        "-fx-background-radius: 10; -fx-padding: 11 14; -fx-font-size: 13px; -fx-text-fill: " + TEXT_PRI + "; " +
+        "-fx-prompt-text-fill: #94A3B8;";
 
+    public UserDashboardScreen(Stage stage) { this.stage = stage; }
+
+    // ── Scene ──────────────────────────────────────────────────────
     public Scene getScene() {
         root = new BorderPane();
-        root.setStyle(BG);
-        root.setLeft(buildSidebar());
-        browseContainer = new FlowPane(20, 20);
-        browseContainer.setStyle("-fx-background-color: transparent;");
+        root.setStyle("-fx-background-color: " + APP_BG + ";");
+        browsePane   = new FlowPane(20, 20);
+        browsePane.setStyle("-fx-background-color: transparent;");
         calendarGrid = new GridPane();
         calendarGrid.setHgap(10); calendarGrid.setVgap(10);
-        calendarGrid.setPadding(new Insets(20, 0, 0, 0));
+        root.setLeft(buildSidebar());
         showBrowseView();
-        return new Scene(root, 1100, 700);
+        return new Scene(root, 1120, 720);
     }
 
-    // ─────────────── SIDEBAR ───────────────
+    // ── Sidebar ────────────────────────────────────────────────────
     private VBox buildSidebar() {
         User u = SessionManager.getInstance().getCurrentUser();
-        VBox sb = new VBox(6);
-        sb.setPadding(new Insets(30, 14, 30, 14));
-        sb.setStyle(SIDEBAR);
-        sb.setPrefWidth(230);
+        VBox sb = new VBox(4);
+        sb.setPadding(new Insets(36, 18, 36, 18));
+        sb.setStyle("-fx-background-color: " + SIDEBAR_GRAD + ";");
+        sb.setPrefWidth(240);
 
-        Label logo = new Label(u.getRole() == Role.VOLUNTEER ? "* Volunteer Hub" : "# EventPass");
-        logo.setStyle(TXT_W + " -fx-font-size: 19px; -fx-font-weight: bold;");
-        VBox.setMargin(logo, new Insets(0, 0, 20, 6));
+        Label brand  = new Label("EventHub");
+        brand.setStyle("-fx-text-fill: white; -fx-font-size: 22px; -fx-font-weight: bold;");
+        VBox.setMargin(brand, new Insets(0, 0, 4, 4));
 
-        Button browseBtn   = sidebarBtn("[>] Browse Events",  "browse");
-        Button calendarBtn = sidebarBtn("[C] My Calendar",    "calendar");
-        Button myTickets   = sidebarBtn("[T] My Tickets",     "tickets");
+        String roleStr = (u.getRole() == Role.VOLUNTEER) ? "VOLUNTEER" : "PARTICIPANT";
+        Label roleTag = new Label(roleStr);
+        roleTag.setStyle("-fx-background-color: rgba(255,255,255,0.25); -fx-text-fill: white; " +
+            "-fx-background-radius: 10; -fx-font-size: 10px; -fx-font-weight: bold; -fx-padding: 3 10;");
+        VBox.setMargin(roleTag, new Insets(0, 0, 24, 0));
 
-        browseBtn  .setOnAction(e -> { activeView = "browse";   root.setLeft(buildSidebar()); showBrowseView(); });
-        calendarBtn.setOnAction(e -> { activeView = "calendar"; root.setLeft(buildSidebar()); showCalendarView(); });
-        myTickets  .setOnAction(e -> { activeView = "tickets";  root.setLeft(buildSidebar()); showMyTicketsView(); });
+        Button browseBtn   = navBtn("Browse Events", "browse");
+        Button calBtn      = navBtn("My Calendar",  "calendar");
+        Button ticketsBtn  = navBtn("My Tickets",   "tickets");
+
+        browseBtn .setOnAction(e -> { activeView = "browse";   root.setLeft(buildSidebar()); showBrowseView(); });
+        calBtn    .setOnAction(e -> { activeView = "calendar"; root.setLeft(buildSidebar()); showCalendarView(); });
+        ticketsBtn.setOnAction(e -> { activeView = "tickets";  root.setLeft(buildSidebar()); showTicketsView(); });
 
         Region spacer = new Region(); VBox.setVgrow(spacer, Priority.ALWAYS);
 
-        Label roleTag = new Label(u.getRole().toString().toUpperCase());
-        roleTag.setStyle("-fx-background-color: #2D1B4E; -fx-text-fill: #CC88FF; -fx-background-radius: 8; -fx-font-size: 11px; -fx-font-weight: bold; -fx-padding: 4 10;");
+        Label footer = new Label("Developed by Prathmesh Darvesh\nRoll No: ECSB441");
+        footer.setStyle("-fx-text-fill: rgba(255,255,255,0.55); -fx-font-size: 10px; -fx-text-alignment: center;");
+        footer.setWrapText(true);
 
-        Button logout = new Button("Logout");
-        logout.setMaxWidth(Double.MAX_VALUE);
-        logout.setStyle("-fx-background-color: #2A1A1A; -fx-text-fill: #FF5555; -fx-background-radius: 12; -fx-padding: 10; -fx-cursor: hand; -fx-font-weight: bold;");
-        logout.setOnAction(e -> { SessionManager.getInstance().logout(); stage.setScene(new AuthScreen(stage).getLoginScene()); });
+        Button logoutBtn = new Button("Logout");
+        logoutBtn.setMaxWidth(Double.MAX_VALUE);
+        logoutBtn.setStyle("-fx-background-color: rgba(255,255,255,0.18); -fx-text-fill: white; " +
+            "-fx-background-radius: 20; -fx-font-weight: bold; -fx-padding: 10; -fx-cursor: hand;");
+        logoutBtn.setOnAction(e -> { SessionManager.getInstance().logout(); stage.setScene(new AuthScreen(stage).getLoginScene()); });
 
-        sb.getChildren().addAll(logo, browseBtn, calendarBtn, myTickets, spacer, roleTag, new Label(""), logout);
+        sb.getChildren().addAll(brand, roleTag, browseBtn, calBtn, ticketsBtn, spacer, footer, new Label(""), logoutBtn);
         return sb;
     }
 
-    private Button sidebarBtn(String text, String viewKey) {
+    private Button navBtn(String text, String viewKey) {
         Button btn = new Button(text);
         btn.setMaxWidth(Double.MAX_VALUE);
         btn.setAlignment(Pos.CENTER_LEFT);
         if (activeView.equals(viewKey)) {
-            btn.setStyle("-fx-background-color: linear-gradient(to right, #8E24AA, #D500F9); -fx-text-fill: white; -fx-background-radius: 12; -fx-padding: 12 16; -fx-cursor: hand; -fx-font-weight: bold;");
+            btn.setStyle("-fx-background-color: rgba(255,255,255,0.28); -fx-text-fill: white; " +
+                "-fx-background-radius: 12; -fx-font-weight: bold; -fx-padding: 12 16; -fx-cursor: hand;");
         } else {
-            btn.setStyle("-fx-background-color: transparent; -fx-text-fill: #AAAACC; -fx-background-radius: 12; -fx-padding: 12 16; -fx-cursor: hand;");
-            btn.setOnMouseEntered(e -> btn.setStyle("-fx-background-color: #2A2A3D; -fx-text-fill: white; -fx-background-radius: 12; -fx-padding: 12 16; -fx-cursor: hand;"));
-            btn.setOnMouseExited (e -> btn.setStyle("-fx-background-color: transparent; -fx-text-fill: #AAAACC; -fx-background-radius: 12; -fx-padding: 12 16; -fx-cursor: hand;"));
+            btn.setStyle("-fx-background-color: transparent; -fx-text-fill: rgba(255,255,255,0.8); " +
+                "-fx-background-radius: 12; -fx-padding: 12 16; -fx-cursor: hand;");
+            btn.setOnMouseEntered(ev -> btn.setStyle("-fx-background-color: rgba(255,255,255,0.15); -fx-text-fill: white; " +
+                "-fx-background-radius: 12; -fx-padding: 12 16; -fx-cursor: hand;"));
+            btn.setOnMouseExited(ev -> btn.setStyle("-fx-background-color: transparent; -fx-text-fill: rgba(255,255,255,0.8); " +
+                "-fx-background-radius: 12; -fx-padding: 12 16; -fx-cursor: hand;"));
         }
         return btn;
     }
 
-    // ─────────────── BROWSE VIEW ───────────────
+    // ── Browse View ────────────────────────────────────────────────
     private void showBrowseView() {
-        VBox center = contentWrapper("Browse Events", "Discover upcoming events. RSVP or apply to volunteer.");
-        browseContainer.getChildren().clear();
-        refreshBrowseCards();
-        ScrollPane sp = scrollPaneFor(browseContainer);
-        center.getChildren().add(sp);
-        root.setCenter(center);
-    }
-
-    private void refreshBrowseCards() {
-        browseContainer.getChildren().clear();
+        VBox c = wrap("Browse Events", "Discover and join events happening near you.");
+        browsePane.getChildren().clear();
         User u = SessionManager.getInstance().getCurrentUser();
         List<Event> events = eventDAO.getAllEvents().stream()
-                .filter(e -> "PUBLISHED".equalsIgnoreCase(e.getStatus()))
-                .collect(Collectors.toList());
+            .filter(e -> "PUBLISHED".equalsIgnoreCase(e.getStatus())).collect(Collectors.toList());
 
         if (events.isEmpty()) {
-            browseContainer.getChildren().add(noDataLabel("No published events yet."));
-            return;
+            browsePane.getChildren().add(emptyLabel("No published events available yet."));
+        } else {
+            for (Event ev : events) browsePane.getChildren().add(buildBrowseCard(ev, u));
         }
-
-        for (Event ev : events) {
-            VBox card = new VBox(10);
-            card.setPadding(new Insets(20));
-            card.setStyle(CARD);
-            card.setPrefWidth(260);
-
-            Label typePill = new Label("  " + ev.getEventType() + "  ");
-            typePill.setStyle("-fx-background-color: #2D1B4E; -fx-text-fill: #D500F9; -fx-background-radius: 8; -fx-font-size: 11px; -fx-font-weight: bold;");
-
-            Label title = new Label(ev.getTitle());
-            title.setStyle(TXT_W + " -fx-font-size: 17px; -fx-font-weight: bold; -fx-wrap-text: true;");
-            title.setMaxWidth(220);
-
-            Label dateLoc = new Label("Date: " + ev.getEventDate().toLocalDate() + "  Loc: " + ev.getLocation());
-            dateLoc.setStyle("-fx-text-fill: #AAAACC; -fx-font-size: 12px; -fx-wrap-text: true;");
-            dateLoc.setMaxWidth(220);
-
-            int rsvp = eventDAO.getRSVPCount(ev.getEventId());
-            int cap  = ev.getMaxCapacity();
-            Label capL = new Label("Spots: " + rsvp + " / " + cap);
-            String capColor = rsvp >= cap ? "#E53935" : "#4CAF50";
-            capL.setStyle("-fx-text-fill: " + capColor + "; -fx-font-size: 12px; -fx-font-weight: bold;");
-
-            card.getChildren().addAll(typePill, title, dateLoc, capL);
-
-            if (ev.getDescription() != null && !ev.getDescription().isBlank()) {
-                Label desc = new Label(ev.getDescription().length() > 90
-                        ? ev.getDescription().substring(0, 87) + "..." : ev.getDescription());
-                desc.setStyle("-fx-text-fill: #8888AA; -fx-font-size: 12px; -fx-wrap-text: true;");
-                desc.setMaxWidth(220);
-                card.getChildren().add(desc);
-            }
-
-            Region spacer = new Region(); VBox.setVgrow(spacer, Priority.ALWAYS);
-            card.getChildren().add(spacer);
-
-            boolean isFull = rsvp >= cap;
-            Button actionBtn = new Button();
-            actionBtn.setMaxWidth(Double.MAX_VALUE);
-
-            if (isFull) {
-                actionBtn.setText("Event Full");
-                actionBtn.setStyle("-fx-background-color: #2A2A3D; -fx-text-fill: #666680; -fx-background-radius: 12; -fx-padding: 10 16;");
-                actionBtn.setDisable(true);
-            } else if (u.getRole() == Role.VOLUNTEER) {
-                actionBtn.setText("Apply to Volunteer");
-                actionBtn.setStyle(BTN_PRI);
-                actionBtn.setOnAction(e -> showVolunteerApplicationDialog(ev, u));
-            } else {
-                actionBtn.setText("RSVP Event");
-                actionBtn.setStyle(BTN_PRI);
-                actionBtn.setOnAction(e -> showRsvpConfirmationDialog(ev, u));
-            }
-            card.getChildren().add(actionBtn);
-            browseContainer.getChildren().add(card);
-        }
+        ScrollPane sp = lightScroll(browsePane);
+        c.getChildren().add(sp); root.setCenter(c);
     }
 
-    // ─────────────── RSVP CONFIRMATION ───────────────
-    private void showRsvpConfirmationDialog(Event ev, User u) {
-        Stage dialog = new Stage();
-        dialog.setTitle("Confirm RSVP");
-        VBox box = new VBox(18);
-        box.setPadding(new Insets(35));
-        box.setStyle(BG);
+    private VBox buildBrowseCard(Event ev, User u) {
+        VBox card = new VBox(10);
+        card.setPadding(new Insets(22));
+        card.setStyle("-fx-background-color: " + WHITE + "; -fx-background-radius: 14; " + CARD_SHADOW);
+        card.setPrefWidth(270);
 
-        Label header = new Label("Confirm Registration");
-        header.setStyle(TXT_W + " -fx-font-size: 22px; -fx-font-weight: bold;");
+        Label tag = new Label(ev.getEventType().toString());
+        tag.setStyle("-fx-background-color: " + BLUE_LITE + "; -fx-text-fill: " + BLUE + "; " +
+            "-fx-background-radius: 8; -fx-font-size: 11px; -fx-font-weight: bold; -fx-padding: 3 10;");
 
-        VBox summary = new VBox(10);
-        summary.setStyle(CARD + " -fx-padding: 20;");
-        summary.getChildren().addAll(
-            styledRow("Event :",    ev.getTitle()),
-            styledRow("Date :",     ev.getEventDate().toLocalDate().toString()),
-            styledRow("Location :", ev.getLocation()),
-            styledRow("Email :",    u.getEmail())
-        );
+        Label title = new Label(ev.getTitle());
+        title.setStyle("-fx-text-fill: " + TEXT_PRI + "; -fx-font-size: 17px; -fx-font-weight: bold; -fx-wrap-text: true;");
+        title.setMaxWidth(230);
 
-        Label note = new Label("By confirming, you'll receive a unique digital ticket and QR code.");
-        note.setStyle("-fx-text-fill: #8888AA; -fx-font-size: 12px; -fx-wrap-text: true;");
+        Label dateLoc = new Label(ev.getEventDate().toLocalDate() + "  •  " + ev.getLocation());
+        dateLoc.setStyle("-fx-text-fill: " + TEXT_SEC + "; -fx-font-size: 12px; -fx-wrap-text: true;");
+        dateLoc.setMaxWidth(230);
 
-        Button confirm = new Button("Confirm & Get Ticket");
-        confirm.setMaxWidth(Double.MAX_VALUE);
-        confirm.setStyle(BTN_PRI);
-        confirm.setOnAction(e -> {
+        int rsvp = eventDAO.getRSVPCount(ev.getEventId()), cap = ev.getMaxCapacity();
+        String cc = rsvp >= cap ? RED_SOFT : GREEN;
+        Label capL = new Label("Spots:  " + rsvp + " / " + cap);
+        capL.setStyle("-fx-text-fill: " + cc + "; -fx-font-size: 12px; -fx-font-weight: bold;");
+
+        card.getChildren().addAll(tag, title, dateLoc, capL);
+
+        if (ev.getDescription() != null && !ev.getDescription().isBlank()) {
+            Label desc = new Label(ev.getDescription().length() > 90
+                ? ev.getDescription().substring(0, 87) + "..." : ev.getDescription());
+            desc.setStyle("-fx-text-fill: " + TEXT_SEC + "; -fx-font-size: 12px; -fx-wrap-text: true;");
+            desc.setMaxWidth(230);
+            card.getChildren().add(desc);
+        }
+
+        Region spacer = new Region(); VBox.setVgrow(spacer, Priority.ALWAYS); card.getChildren().add(spacer);
+
+        boolean isFull = rsvp >= cap;
+        Button btn = new Button();
+        btn.setMaxWidth(Double.MAX_VALUE);
+        if (isFull) {
+            btn.setText("Event Full"); btn.setDisable(true);
+            btn.setStyle("-fx-background-color: " + BORDER + "; -fx-text-fill: " + TEXT_SEC + "; -fx-background-radius: 20; -fx-padding: 10 18;");
+        } else if (u.getRole() == Role.VOLUNTEER) {
+            btn.setText("Apply to Volunteer"); btn.setStyle(BTN_PRIMARY);
+            btn.setOnAction(e -> showVolunteerDialog(ev, u));
+        } else {
+            btn.setText("RSVP Event"); btn.setStyle(BTN_PRIMARY);
+            btn.setOnAction(e -> showRsvpDialog(ev, u));
+        }
+        card.getChildren().add(btn);
+        return card;
+    }
+
+    // ── RSVP Dialog ────────────────────────────────────────────────
+    private void showRsvpDialog(Event ev, User u) {
+        Stage d = new Stage(); d.setTitle("Confirm RSVP");
+        VBox box = new VBox(20); box.setPadding(new Insets(36)); box.setStyle("-fx-background-color: " + APP_BG + ";");
+
+        Label h = new Label("Confirm Your Spot");
+        h.setStyle("-fx-text-fill: " + TEXT_PRI + "; -fx-font-size: 22px; -fx-font-weight: bold;");
+
+        VBox summary = new VBox(12); summary.setStyle("-fx-background-color: " + WHITE + "; -fx-background-radius: 14; " + CARD_SHADOW + " -fx-padding: 22;");
+        summary.getChildren().addAll(row("Event", ev.getTitle()), row("Date", ev.getEventDate().toLocalDate().toString()), row("Venue", ev.getLocation()), row("Account", u.getEmail()));
+
+        Label note = new Label("Confirming will generate a unique ticket and QR code for entry.");
+        note.setStyle("-fx-text-fill: " + TEXT_SEC + "; -fx-font-size: 13px; -fx-wrap-text: true;");
+
+        Button confirmBtn = new Button("Confirm & Get Ticket");
+        confirmBtn.setMaxWidth(Double.MAX_VALUE); confirmBtn.setStyle(BTN_PRIMARY);
+        confirmBtn.setOnAction(e -> {
             boolean ok = eventDAO.registerForEvent(ev.getEventId(), u.getUserId(), u.getRole(), null);
-            if (ok) {
-                dialog.close();
-                String ticket = eventDAO.getTicketNumberForUserEvent(ev.getEventId(), u.getUserId());
-                if (ticket != null) showTicketModal(ev, ticket);
-            } else {
-                new Alert(Alert.AlertType.ERROR, "Already registered or an error occurred.").show();
-            }
+            if (ok) { d.close(); String t = eventDAO.getTicketNumberForUserEvent(ev.getEventId(), u.getUserId()); if (t != null) showTicketModal(ev, t); }
+            else new Alert(Alert.AlertType.ERROR, "Already registered or event is full.").show();
         });
-
-        Button cancel = new Button("Cancel");
-        cancel.setMaxWidth(Double.MAX_VALUE);
-        cancel.setStyle("-fx-background-color: transparent; -fx-text-fill: #AAAACC; -fx-cursor: hand;");
-        cancel.setOnAction(e -> dialog.close());
-
-        box.getChildren().addAll(header, summary, note, confirm, cancel);
-        dialog.setScene(new Scene(box, 420, 440));
-        dialog.show();
+        Button cancel = new Button("Cancel"); cancel.setMaxWidth(Double.MAX_VALUE);
+        cancel.setStyle("-fx-background-color: transparent; -fx-text-fill: " + TEXT_SEC + "; -fx-cursor: hand;");
+        cancel.setOnAction(e -> d.close());
+        box.getChildren().addAll(h, summary, note, confirmBtn, cancel);
+        d.setScene(new Scene(box, 430, 440)); d.show();
     }
 
-    // ─────────────── QR TICKET MODAL ───────────────
+    // ── Ticket Modal ───────────────────────────────────────────────
     private void showTicketModal(Event ev, String ticketNumber) {
-        Stage dialog = new Stage();
-        dialog.setTitle("Your Ticket");
-        VBox box = new VBox(18);
-        box.setPadding(new Insets(35));
-        box.setStyle(BG);
-        box.setAlignment(Pos.CENTER);
+        Stage d = new Stage(); d.setTitle("Your Ticket");
+        VBox box = new VBox(24); box.setPadding(new Insets(36)); box.setStyle("-fx-background-color: " + APP_BG + ";"); box.setAlignment(Pos.CENTER);
 
-        Label header = new Label("Your Digital Ticket");
-        header.setStyle(TXT_W + " -fx-font-size: 22px; -fx-font-weight: bold;");
+        Label h = new Label("Your Digital Ticket");
+        h.setStyle("-fx-text-fill: " + TEXT_PRI + "; -fx-font-size: 22px; -fx-font-weight: bold;");
 
-        VBox ticketCard = new VBox(12);
-        ticketCard.setAlignment(Pos.CENTER);
-        ticketCard.setStyle("-fx-background-color: #1E1E2E; -fx-background-radius: 20; -fx-padding: 30; -fx-effect: dropshadow(three-pass-box, rgba(142,36,170,0.4), 20, 0, 0, 0);");
+        VBox card = new VBox(14); card.setAlignment(Pos.CENTER);
+        card.setStyle("-fx-background-color: " + WHITE + "; -fx-background-radius: 20; -fx-padding: 32; " +
+            "-fx-effect: dropshadow(three-pass-box, rgba(37,99,235,0.15), 24, 0, 0, 8);");
 
-        Label evtTitle = new Label(ev.getTitle());
-        evtTitle.setStyle(TXT_W + " -fx-font-size: 20px; -fx-font-weight: bold;");
+        Label evTitle = new Label(ev.getTitle());
+        evTitle.setStyle("-fx-text-fill: " + TEXT_PRI + "; -fx-font-size: 19px; -fx-font-weight: bold;");
 
-        Label dateLoc = new Label(ev.getEventDate().toLocalDate() + "  |  " + ev.getLocation());
-        dateLoc.setStyle("-fx-text-fill: #AAAACC; -fx-font-size: 13px;");
+        Label evDate = new Label(ev.getEventDate().toLocalDate() + "  •  " + ev.getLocation());
+        evDate.setStyle("-fx-text-fill: " + TEXT_SEC + "; -fx-font-size: 13px;");
 
-        Region sep = new Region();
-        sep.setStyle("-fx-background-color: #2A2A3D;");
-        sep.setPrefHeight(1); sep.setMaxWidth(Double.MAX_VALUE);
+        // Divider
+        Region div = new Region(); div.setStyle("-fx-background-color: " + BORDER + ";");
+        div.setPrefHeight(1); div.setMaxWidth(Double.MAX_VALUE);
 
-        Label tktLabel = new Label("TICKET ID");
-        tktLabel.setStyle("-fx-text-fill: #666680; -fx-font-size: 11px; -fx-font-weight: bold;");
+        Label tktLbl = new Label("TICKET ID");
+        tktLbl.setStyle("-fx-text-fill: " + TEXT_SEC + "; -fx-font-size: 11px; -fx-font-weight: bold;");
 
         Label tktNum = new Label(ticketNumber);
-        tktNum.setStyle("-fx-text-fill: #D500F9; -fx-font-size: 22px; -fx-font-weight: bold; -fx-font-family: 'Courier New', monospace;");
+        tktNum.setStyle("-fx-text-fill: " + BLUE + "; -fx-font-size: 22px; -fx-font-weight: bold; -fx-font-family: 'Courier New', monospace;");
 
-        // QR Code via qrserver API
-        ImageView qrView = new ImageView();
-        qrView.setFitWidth(180); qrView.setFitHeight(180); qrView.setPreserveRatio(true);
-        try {
-            String qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=" + ticketNumber;
-            qrView.setImage(new Image(qrUrl, true));
-        } catch (Exception ignored) {}
+        // QR Code via API
+        ImageView qr = new ImageView();
+        qr.setFitWidth(180); qr.setFitHeight(180); qr.setPreserveRatio(true);
+        try { qr.setImage(new Image("https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=" + ticketNumber, true)); }
+        catch (Exception ignored) {}
 
-        Label scanNote = new Label("Present this QR code at the venue entrance for check-in");
-        scanNote.setStyle("-fx-text-fill: #666680; -fx-font-size: 12px; -fx-wrap-text: true;");
-        scanNote.setMaxWidth(280);
+        Label scan = new Label("Present at venue for check-in");
+        scan.setStyle("-fx-text-fill: " + TEXT_SEC + "; -fx-font-size: 12px;");
 
-        ticketCard.getChildren().addAll(evtTitle, dateLoc, sep, tktLabel, tktNum, qrView, scanNote);
-        box.getChildren().addAll(header, ticketCard);
-
-        dialog.setScene(new Scene(box, 400, 580));
-        dialog.show();
+        card.getChildren().addAll(evTitle, evDate, div, tktLbl, tktNum, qr, scan);
+        box.getChildren().addAll(h, card);
+        d.setScene(new Scene(box, 400, 560)); d.show();
     }
 
-    // ─────────────── VOLUNTEER APPLICATION ───────────────
-    private void showVolunteerApplicationDialog(Event ev, User u) {
-        Stage dialog = new Stage();
-        dialog.setTitle("Volunteer Application");
-        VBox box = new VBox(16);
-        box.setPadding(new Insets(30));
-        box.setStyle(BG);
-
-        Label header = new Label("Apply to Volunteer\n" + ev.getTitle());
-        header.setStyle(TXT_W + " -fx-font-size: 20px; -fx-font-weight: bold;");
-
+    // ── Volunteer Dialog ───────────────────────────────────────────
+    private void showVolunteerDialog(Event ev, User u) {
+        Stage d = new Stage(); d.setTitle("Apply to Volunteer");
+        VBox box = new VBox(18); box.setPadding(new Insets(32)); box.setStyle("-fx-background-color: " + APP_BG + ";");
+        Label h = new Label("Volunteer Application\n" + ev.getTitle());
+        h.setStyle("-fx-text-fill: " + TEXT_PRI + "; -fx-font-size: 20px; -fx-font-weight: bold;");
         Label prompt = new Label("Why do you want to volunteer for this event?");
-        prompt.setStyle("-fx-text-fill: #AAAACC; -fx-font-size: 14px;");
-
-        TextArea ta = new TextArea();
-        ta.setWrapText(true); ta.setPrefRowCount(4);
-        ta.setStyle("-fx-control-inner-background: #2A2A3D; -fx-text-inner-color: white;");
-
-        Button submit = new Button("Submit Application");
-        submit.setMaxWidth(Double.MAX_VALUE);
-        submit.setStyle(BTN_PRI);
-        submit.setOnAction(e -> {
-            if (ta.getText().isBlank()) {
-                new Alert(Alert.AlertType.ERROR, "Please write a short description.").show();
-                return;
-            }
+        prompt.setStyle("-fx-text-fill: " + TEXT_SEC + "; -fx-font-size: 14px;");
+        TextArea ta = new TextArea(); ta.setWrapText(true); ta.setPrefRowCount(4);
+        ta.setStyle("-fx-control-inner-background: white; -fx-text-inner-color: " + TEXT_PRI + "; -fx-background-radius: 10; -fx-font-size: 13px;");
+        Button sub = new Button("Submit Application"); sub.setMaxWidth(Double.MAX_VALUE); sub.setStyle(BTN_PRIMARY);
+        sub.setOnAction(e -> {
+            if (ta.getText().isBlank()) { new Alert(Alert.AlertType.ERROR, "Please write a short description.").show(); return; }
             boolean ok = eventDAO.registerForEvent(ev.getEventId(), u.getUserId(), u.getRole(), ta.getText());
-            if (ok) {
-                new Alert(Alert.AlertType.INFORMATION, "Application submitted! Pending organizer approval.").show();
-                dialog.close();
-            } else {
-                new Alert(Alert.AlertType.ERROR, "Already applied or event is full.").show();
-            }
+            if (ok) { new Alert(Alert.AlertType.INFORMATION, "Application submitted! Awaiting organizer approval.").show(); d.close(); }
+            else new Alert(Alert.AlertType.ERROR, "Already applied or event is full.").show();
         });
-
-        box.getChildren().addAll(header, prompt, ta, submit);
-        dialog.setScene(new Scene(box, 400, 340));
-        dialog.show();
+        box.getChildren().addAll(h, prompt, ta, sub);
+        d.setScene(new Scene(box, 400, 340)); d.show();
     }
 
-    // ─────────────── CALENDAR VIEW ───────────────
+    // ── Calendar View ──────────────────────────────────────────────
     private void showCalendarView() {
-        VBox center = contentWrapper("My Calendar", "Your accepted events are highlighted in purple.");
-
-        HBox nav = new HBox(15);
-        nav.setAlignment(Pos.CENTER_LEFT);
-        Button prev = navBtn("<< Prev"); Button next = navBtn("Next >>");
-        Label monthLabel = new Label();
-        monthLabel.setStyle(TXT_W + " -fx-font-size: 18px; -fx-font-weight: bold; -fx-min-width: 180;");
-        nav.getChildren().addAll(prev, monthLabel, next);
-
-        prev.setOnAction(e -> { currentYearMonth = currentYearMonth.minusMonths(1); populateCalendar(monthLabel); });
-        next.setOnAction(e -> { currentYearMonth = currentYearMonth.plusMonths(1);  populateCalendar(monthLabel); });
-
-        populateCalendar(monthLabel);
-        center.getChildren().addAll(nav, calendarGrid);
-        root.setCenter(center);
+        VBox c = wrap("My Calendar", "Accepted events are highlighted. Click a date to see details.");
+        HBox nav = new HBox(16); nav.setAlignment(Pos.CENTER_LEFT);
+        Button prev = navArrBtn("< Prev"); Button next = navArrBtn("Next >");
+        Label monthLbl = new Label(); monthLbl.setStyle("-fx-text-fill: " + TEXT_PRI + "; -fx-font-size: 18px; -fx-font-weight: bold; -fx-min-width: 180;");
+        nav.getChildren().addAll(prev, monthLbl, next);
+        prev.setOnAction(e -> { currentYearMonth = currentYearMonth.minusMonths(1); buildCalendar(monthLbl); });
+        next.setOnAction(e -> { currentYearMonth = currentYearMonth.plusMonths(1); buildCalendar(monthLbl); });
+        buildCalendar(monthLbl);
+        c.getChildren().addAll(nav, calendarGrid);
+        root.setCenter(c);
     }
 
-    private void populateCalendar(Label monthLabel) {
+    private void buildCalendar(Label monthLbl) {
         calendarGrid.getChildren().clear();
-        monthLabel.setText(currentYearMonth.getMonth() + " " + currentYearMonth.getYear());
+        monthLbl.setText(currentYearMonth.getMonth() + " " + currentYearMonth.getYear());
 
         String[] days = {"Mon","Tue","Wed","Thu","Fri","Sat","Sun"};
         for (int i = 0; i < 7; i++) {
             Label d = new Label(days[i]);
-            d.setStyle("-fx-font-weight: bold; -fx-text-fill: #666680; -fx-font-size: 13px; -fx-alignment: center; -fx-pref-width: 80;");
+            d.setStyle("-fx-text-fill: " + TEXT_SEC + "; -fx-font-size: 12px; -fx-font-weight: bold; -fx-alignment: center; -fx-pref-width: 86;");
             calendarGrid.add(d, i, 0);
         }
 
-        LocalDate first = currentYearMonth.atDay(1);
-        int startCol = first.getDayOfWeek().getValue() - 1;
-        int col = startCol, row = 1;
-
         User u = SessionManager.getInstance().getCurrentUser();
         List<Event> myEvents = eventDAO.getRegisteredEventsForUser(u.getUserId());
+        LocalDate today = LocalDate.now();
+        int col = currentYearMonth.atDay(1).getDayOfWeek().getValue() - 1, row = 1;
 
         for (int day = 1; day <= currentYearMonth.lengthOfMonth(); day++) {
             LocalDate date = currentYearMonth.atDay(day);
             List<Event> dayEvents = myEvents.stream()
-                    .filter(e -> e.getEventDate().toLocalDate().equals(date))
-                    .collect(Collectors.toList());
+                .filter(e -> e.getEventDate().toLocalDate().equals(date)).collect(Collectors.toList());
 
-            Button btn = new Button(String.valueOf(day));
-            btn.setPrefSize(84, 84);
-            if (!dayEvents.isEmpty()) {
-                btn.setStyle("-fx-background-color: linear-gradient(to bottom right, #8E24AA, #D500F9); -fx-text-fill: white; -fx-font-size: 15px; -fx-font-weight: bold; -fx-background-radius: 12; -fx-cursor: hand;");
-                btn.setOnAction(e -> showDayEventsDialog(date, dayEvents, u));
+            VBox cell = new VBox(4); cell.setAlignment(Pos.CENTER);
+            cell.setPrefSize(86, 70);
+            boolean isToday = date.equals(today);
+
+            // Day number — circle for today
+            StackPane numPane = new StackPane();
+            if (isToday) {
+                Circle circle = new Circle(16, Color.web(BLUE));
+                Label numLbl = new Label(String.valueOf(day));
+                numLbl.setStyle("-fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold;");
+                numPane.getChildren().addAll(circle, numLbl);
             } else {
-                btn.setStyle("-fx-background-color: #1E1E2E; -fx-text-fill: #AAAACC; -fx-font-size: 14px; -fx-background-radius: 12;");
+                Label numLbl = new Label(String.valueOf(day));
+                numLbl.setStyle("-fx-text-fill: " + TEXT_PRI + "; -fx-font-size: 14px;" + (dayEvents.isEmpty() ? "" : " -fx-font-weight: bold;"));
+                numPane.getChildren().add(numLbl);
             }
-            calendarGrid.add(btn, col, row);
+            cell.getChildren().add(numPane);
+
+            // Blue dot if events exist
+            if (!dayEvents.isEmpty()) {
+                Circle dot = new Circle(4, Color.web(BLUE));
+                cell.getChildren().add(dot);
+            }
+
+            String cellStyle;
+            if (!dayEvents.isEmpty()) {
+                cellStyle = "-fx-background-color: " + BLUE_LITE + "; -fx-background-radius: 12; -fx-cursor: hand;";
+                cell.setStyle(cellStyle);
+                cell.setOnMouseEntered(e -> cell.setStyle("-fx-background-color: #DBEAFE; -fx-background-radius: 12; -fx-cursor: hand;"));
+                cell.setOnMouseExited(e -> cell.setStyle(cellStyle));
+                cell.setOnMouseClicked(e -> showDayDialog(date, dayEvents, u));
+            } else {
+                cell.setStyle("-fx-background-color: " + WHITE + "; -fx-background-radius: 12; " +
+                    "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.04), 6, 0, 0, 2);");
+            }
+
+            calendarGrid.add(cell, col, row);
             col++; if (col == 7) { col = 0; row++; }
         }
     }
 
-    private void showDayEventsDialog(LocalDate date, List<Event> events, User u) {
-        Stage dialog = new Stage();
-        dialog.setTitle("Events on " + date);
-        VBox box = new VBox(16);
-        box.setPadding(new Insets(30));
-        box.setStyle(BG);
-
-        Label header = new Label("Events on " + date);
-        header.setStyle(TXT_W + " -fx-font-size: 20px; -fx-font-weight: bold;");
-        box.getChildren().add(header);
-
+    private void showDayDialog(LocalDate date, List<Event> events, User u) {
+        Stage d = new Stage(); d.setTitle("Events on " + date);
+        VBox box = new VBox(16); box.setPadding(new Insets(30)); box.setStyle("-fx-background-color: " + APP_BG + ";");
+        Label h = new Label("Events on " + date); h.setStyle("-fx-text-fill: " + TEXT_PRI + "; -fx-font-size: 20px; -fx-font-weight: bold;");
+        box.getChildren().add(h);
         for (Event ev : events) {
             VBox card = new VBox(10);
-            card.setStyle(CARD + " -fx-padding: 20;");
-            card.getChildren().addAll(
-                styledRow("Event :",    ev.getTitle()),
-                styledRow("Location :", ev.getLocation()),
-                styledRow("Type :",     ev.getEventType().toString())
-            );
-            Button viewTicket = new Button("View My Ticket & QR");
-            viewTicket.setStyle(BTN_PRI);
-            viewTicket.setOnAction(e -> {
-                String ticket = eventDAO.getTicketNumberForUserEvent(ev.getEventId(), u.getUserId());
-                if (ticket != null) showTicketModal(ev, ticket);
+            card.setStyle("-fx-background-color: " + WHITE + "; -fx-background-radius: 14; " + CARD_SHADOW + " -fx-padding: 20;");
+            card.getChildren().addAll(row("Event", ev.getTitle()), row("Location", ev.getLocation()), row("Type", ev.getEventType().toString()));
+            Button ticketBtn = new Button("View My Ticket");
+            ticketBtn.setStyle(BTN_PRIMARY);
+            ticketBtn.setOnAction(e -> {
+                String t = eventDAO.getTicketNumberForUserEvent(ev.getEventId(), u.getUserId());
+                if (t != null) showTicketModal(ev, t);
                 else new Alert(Alert.AlertType.INFORMATION, "No ticket found. Application may still be pending.").show();
             });
-            card.getChildren().add(viewTicket);
-            box.getChildren().add(card);
+            card.getChildren().add(ticketBtn); box.getChildren().add(card);
         }
-
-        ScrollPane sp = new ScrollPane(box);
-        sp.setFitToWidth(true);
-        sp.setStyle("-fx-background: #12121A; -fx-background-color: #12121A;");
-        dialog.setScene(new Scene(sp, 420, 480));
-        dialog.show();
+        ScrollPane sp = new ScrollPane(box); sp.setFitToWidth(true);
+        sp.setStyle("-fx-background: " + APP_BG + "; -fx-background-color: " + APP_BG + "; -fx-border-color: " + APP_BG + ";");
+        d.setScene(new Scene(sp, 420, 480)); d.show();
     }
 
-    // ─────────────── MY TICKETS VIEW ───────────────
-    private void showMyTicketsView() {
-        VBox center = contentWrapper("My Tickets", "Your confirmed event registrations with QR codes.");
+    // ── My Tickets View ────────────────────────────────────────────
+    private void showTicketsView() {
+        VBox c = wrap("My Tickets", "All your confirmed registrations and QR codes.");
         User u = SessionManager.getInstance().getCurrentUser();
-        List<Event> allAccepted = eventDAO.getRegisteredEventsForUser(u.getUserId());
-
-        VBox ticketList = new VBox(14);
-        ticketList.setStyle(BG);
-
-        if (allAccepted.isEmpty()) {
-            ticketList.getChildren().add(noDataLabel("No confirmed registrations yet."));
+        List<Event> accepted = eventDAO.getRegisteredEventsForUser(u.getUserId());
+        VBox list = new VBox(16); list.setStyle("-fx-background-color: " + APP_BG + ";");
+        if (accepted.isEmpty()) {
+            list.getChildren().add(emptyLabel("No confirmed registrations yet."));
         } else {
-            for (Event ev : allAccepted) {
+            for (Event ev : accepted) {
                 String ticket = eventDAO.getTicketNumberForUserEvent(ev.getEventId(), u.getUserId());
-                VBox card = new VBox(10);
-                card.setStyle(CARD + " -fx-padding: 20;");
-                card.getChildren().addAll(
-                    styledRow("Event :",    ev.getTitle()),
-                    styledRow("Date :",     ev.getEventDate().toLocalDate().toString()),
-                    styledRow("Location :", ev.getLocation()),
-                    styledRow("Ticket :",   ticket != null ? ticket : "Pending")
-                );
+                VBox card = new VBox(12);
+                card.setStyle("-fx-background-color: " + WHITE + "; -fx-background-radius: 14; " + CARD_SHADOW + " -fx-padding: 22;");
+                card.getChildren().addAll(row("Event", ev.getTitle()), row("Date", ev.getEventDate().toLocalDate().toString()), row("Venue", ev.getLocation()), row("Ticket", ticket != null ? ticket : "Pending"));
                 if (ticket != null) {
                     Button viewBtn = new Button("Open Ticket & QR Code");
-                    viewBtn.setStyle(BTN_PRI);
+                    viewBtn.setStyle(BTN_PRIMARY);
                     viewBtn.setOnAction(e -> showTicketModal(ev, ticket));
                     card.getChildren().add(viewBtn);
                 }
-                ticketList.getChildren().add(card);
+                list.getChildren().add(card);
             }
         }
-
-        ScrollPane sp = new ScrollPane(ticketList);
-        sp.setFitToWidth(true);
-        sp.setStyle("-fx-background-color: transparent; -fx-background: #12121A; -fx-border-color: #12121A;");
+        ScrollPane sp = new ScrollPane(list); sp.setFitToWidth(true);
+        sp.setStyle("-fx-background-color: transparent; -fx-background: " + APP_BG + "; -fx-border-color: " + APP_BG + ";");
         VBox.setVgrow(sp, Priority.ALWAYS);
-        center.getChildren().add(sp);
-        root.setCenter(center);
+        c.getChildren().add(sp); root.setCenter(c);
     }
 
-    // ─────────────── HELPERS ───────────────
-    private VBox contentWrapper(String title, String subtitle) {
-        VBox c = new VBox(20);
-        c.setPadding(new Insets(40));
-        c.setStyle(BG);
-        Label t = new Label(title);
-        t.setStyle(TXT_W + " -fx-font-size: 26px; -fx-font-weight: bold;");
-        Label s = new Label(subtitle);
-        s.setStyle("-fx-text-fill: #666680; -fx-font-size: 14px;");
-        c.getChildren().addAll(t, s);
-        return c;
+    // ── Helpers ────────────────────────────────────────────────────
+    private VBox wrap(String title, String subtitle) {
+        VBox c = new VBox(22); c.setPadding(new Insets(40)); c.setStyle("-fx-background-color: " + APP_BG + ";");
+        Label t = new Label(title); t.setStyle("-fx-text-fill: " + TEXT_PRI + "; -fx-font-size: 26px; -fx-font-weight: bold;");
+        Label s = new Label(subtitle); s.setStyle("-fx-text-fill: " + TEXT_SEC + "; -fx-font-size: 14px;");
+        c.getChildren().addAll(t, s); return c;
     }
-
-    private ScrollPane scrollPaneFor(FlowPane fp) {
-        ScrollPane sp = new ScrollPane(fp);
-        sp.setFitToWidth(true);
-        sp.setStyle("-fx-background-color: transparent; -fx-background: #12121A; -fx-border-color: #12121A;");
-        VBox.setVgrow(sp, Priority.ALWAYS);
-        return sp;
+    private ScrollPane lightScroll(FlowPane fp) {
+        ScrollPane sp = new ScrollPane(fp); sp.setFitToWidth(true);
+        sp.setStyle("-fx-background-color: transparent; -fx-background: " + APP_BG + "; -fx-border-color: " + APP_BG + ";");
+        VBox.setVgrow(sp, Priority.ALWAYS); return sp;
     }
-
-    private HBox styledRow(String label, String value) {
-        Label l = new Label(label);
-        l.setStyle("-fx-text-fill: #666680; -fx-font-size: 13px; -fx-min-width: 90;");
-        Label v = new Label(value);
-        v.setStyle("-fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-wrap-text: true;");
-        v.setMaxWidth(260);
-        HBox row = new HBox(8, l, v);
-        row.setAlignment(Pos.CENTER_LEFT);
-        return row;
+    private HBox row(String label, String value) {
+        Label l = new Label(label + ":"); l.setStyle("-fx-text-fill: " + TEXT_SEC + "; -fx-font-size: 13px; -fx-min-width: 80;");
+        Label v = new Label(value); v.setStyle("-fx-text-fill: " + TEXT_PRI + "; -fx-font-size: 13px; -fx-font-weight: bold; -fx-wrap-text: true;"); v.setMaxWidth(270);
+        HBox r = new HBox(10, l, v); r.setAlignment(Pos.CENTER_LEFT); return r;
     }
-
-    private Button navBtn(String text) {
+    private Button navArrBtn(String text) {
         Button b = new Button(text);
-        b.setStyle("-fx-background-color: #2A2A3D; -fx-text-fill: white; -fx-background-radius: 10; -fx-cursor: hand; -fx-padding: 8 14;");
+        b.setStyle("-fx-background-color: " + WHITE + "; -fx-text-fill: " + BLUE + "; -fx-background-radius: 12; -fx-border-color: " + BORDER + "; -fx-border-radius: 12; -fx-padding: 8 16; -fx-cursor: hand; -fx-font-weight: bold;");
         return b;
     }
-
-    private Label noDataLabel(String text) {
-        Label l = new Label(text);
-        l.setStyle("-fx-text-fill: #505070; -fx-font-size: 16px;");
-        return l;
+    private Label emptyLabel(String text) {
+        Label l = new Label(text); l.setStyle("-fx-text-fill: " + TEXT_SEC + "; -fx-font-size: 14px;"); return l;
     }
 }

@@ -8,9 +8,9 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.image.Image;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
@@ -20,236 +20,264 @@ public class AuthScreen {
     private Stage stage;
     private UserDAO userDAO = new UserDAO();
 
-    // Constant Styles
-    private final String BG_COLOR = "-fx-background-color: #1A1A1A;";
-    private final String FIELD_STYLE = "-fx-background-color: #333333; -fx-text-fill: white; -fx-background-radius: 20; -fx-padding: 12 15; -fx-prompt-text-fill: #AAAAAA;";
-    private final String BTN_PRIMARY = "-fx-background-color: linear-gradient(to right, #8E24AA, #D500F9); -fx-text-fill: white; -fx-background-radius: 20; -fx-padding: 10; -fx-font-weight: bold; -fx-cursor: hand;";
-    private final String BTN_SECONDARY = "-fx-background-color: transparent; -fx-border-color: white; -fx-border-radius: 20; -fx-text-fill: white; -fx-padding: 10; -fx-cursor: hand;";
-    private final String TEXT_White = "-fx-text-fill: white; -fx-font-family: 'Segoe UI', sans-serif;";
-    private final String LINK_STYLE = "-fx-text-fill: #CCCCCC; -fx-font-size: 11px; -fx-cursor: hand; -fx-underline: true;";
+    // ── Design Tokens ──────────────────────────────────────────────
+    // Backgrounds
+    private static final String APP_BG   = "#F0F4F8";   // ice-blue page bg
+    private static final String WHITE    = "#FFFFFF";
 
-    public AuthScreen(Stage stage) {
-        this.stage = stage;
+    // Blues
+    private static final String BLUE     = "#2563EB";
+    private static final String BLUE_DRK = "#1D4ED8";
+    private static final String GRAD_LFT = "linear-gradient(to bottom right, #4facfe 0%, #00f2fe 100%)";
+
+    // Text
+    private static final String TEXT_PRI = "#1E293B";
+    private static final String TEXT_SEC = "#64748B";
+    private static final String TEXT_HIN = "#94A3B8";
+
+    // Field / Border
+    private static final String FIELD_BG  = "#FFFFFF";
+    private static final String BORDER    = "#E2E8F0";
+
+    // ── Inline style constants ─────────────────────────────────────
+    private final String FIELD_STYLE =
+        "-fx-background-color: " + FIELD_BG + ";" +
+        "-fx-border-color: " + BORDER + ";" +
+        "-fx-border-radius: 10;" +
+        "-fx-background-radius: 10;" +
+        "-fx-padding: 12 16;" +
+        "-fx-font-size: 14px;" +
+        "-fx-text-fill: " + TEXT_PRI + ";" +
+        "-fx-prompt-text-fill: " + TEXT_HIN + ";";
+
+    private final String BTN_PRIMARY =
+        "-fx-background-color: " + BLUE + ";" +
+        "-fx-text-fill: white;" +
+        "-fx-font-weight: bold;" +
+        "-fx-font-size: 14px;" +
+        "-fx-background-radius: 20;" +
+        "-fx-padding: 12 0;" +
+        "-fx-cursor: hand;";
+
+    private final String BTN_OUTLINE =
+        "-fx-background-color: transparent;" +
+        "-fx-border-color: " + BLUE + ";" +
+        "-fx-border-radius: 20;" +
+        "-fx-text-fill: " + BLUE + ";" +
+        "-fx-font-weight: bold;" +
+        "-fx-font-size: 14px;" +
+        "-fx-padding: 12 0;" +
+        "-fx-cursor: hand;";
+
+    public AuthScreen(Stage stage) { this.stage = stage; }
+
+    public Scene getLoginScene()   { return buildLayout(buildLoginForm()); }
+    public Scene getRegisterScene(){ return buildLayout(buildRegisterForm()); }
+
+    // ── Shell ──────────────────────────────────────────────────────
+    private Scene buildLayout(VBox formPane) {
+        HBox root = new HBox();
+        root.setStyle("-fx-background-color: " + APP_BG + ";");
+
+        // ── Left decorative pane ──────────────────────────────
+        VBox left = new VBox(20);
+        left.setAlignment(Pos.CENTER);
+        left.setPadding(new Insets(60));
+        left.setPrefWidth(420);
+        left.setMinWidth(320);
+        left.setStyle("-fx-background-color: " + GRAD_LFT + ";");
+
+        // Big circle decoration
+        Circle bigCircle = new Circle(90);
+        bigCircle.setFill(Color.web("#FFFFFF", 0.12));
+
+        Circle medCircle = new Circle(55);
+        medCircle.setFill(Color.web("#FFFFFF", 0.10));
+
+        StackPane circles = new StackPane(bigCircle, medCircle);
+
+        Label brand = new Label("EventHub");
+        brand.setStyle("-fx-text-fill: white; -fx-font-size: 36px; -fx-font-weight: bold;");
+
+        Label tagline = new Label("Manage, Attend & Volunteer\nfor events that matter.");
+        tagline.setStyle("-fx-text-fill: rgba(255,255,255,0.85); -fx-font-size: 15px; -fx-text-alignment: center; -fx-alignment: center;");
+        tagline.setWrapText(true);
+
+        Label footer = new Label("Developed by Prathmesh Darvesh (Roll No: ECSB441)");
+        footer.setStyle("-fx-text-fill: rgba(255,255,255,0.55); -fx-font-size: 11px; -fx-text-alignment: center; -fx-alignment: center;");
+        footer.setWrapText(true);
+        VBox.setVgrow(footer, Priority.ALWAYS);
+        footer.setAlignment(Pos.BOTTOM_CENTER);
+        VBox.setMargin(footer, new Insets(40, 0, 0, 0));
+
+        Region spacer = new Region(); VBox.setVgrow(spacer, Priority.ALWAYS);
+        left.getChildren().addAll(circles, brand, tagline, spacer, footer);
+
+        // ── Right form pane ───────────────────────────────────
+        StackPane right = new StackPane(formPane);
+        right.setStyle("-fx-background-color: " + WHITE + ";");
+        HBox.setHgrow(right, Priority.ALWAYS);
+
+        root.getChildren().addAll(left, right);
+        return new Scene(root, 960, 620);
     }
 
-    public Scene getLoginScene() {
-        return createSplitLayout(getLoginForm());
-    }
+    // ── LOGIN ──────────────────────────────────────────────────────
+    private VBox buildLoginForm() {
+        VBox form = new VBox(18);
+        form.setAlignment(Pos.CENTER_LEFT);
+        form.setMaxWidth(360);
+        form.setPadding(new Insets(50, 40, 40, 40));
 
-    public Scene getRegisterScene() {
-        return createSplitLayout(getRegisterForm());
-    }
+        Label welcome = new Label("Welcome back");
+        welcome.setStyle("-fx-text-fill: " + TEXT_PRI + "; -fx-font-size: 30px; -fx-font-weight: bold;");
 
-    private Scene createSplitLayout(VBox formPane) {
-        HBox hbox = new HBox();
-        hbox.setStyle("-fx-background-color: #1A1A1A;");
+        Label sub = new Label("Sign in to manage your events");
+        sub.setStyle("-fx-text-fill: " + TEXT_SEC + "; -fx-font-size: 14px;");
+        VBox.setMargin(sub, new Insets(0, 0, 10, 0));
 
-        // Left Pane: Image Background
-        StackPane leftPane = new StackPane();
-        HBox.setHgrow(leftPane, Priority.ALWAYS);
-        leftPane.setPrefWidth(405); // 45% of 900
+        TextField emailField = styledField("Email address");
+        PasswordField passField  = styledPass("Password");
 
-        String imagePath = "file:///C:/Users/Asus/OneDrive/Desktop/project/java_project/src/eventmanagement/public/img1.jpg"; 
-        Image image = new Image(imagePath);
-        BackgroundImage bgImage = new BackgroundImage(
-                image,
-                BackgroundRepeat.NO_REPEAT,
-                BackgroundRepeat.NO_REPEAT,
-                BackgroundPosition.CENTER,
-                new BackgroundSize(BackgroundSize.AUTO, BackgroundSize.AUTO, false, false, false, true)
-        );
-        leftPane.setBackground(new Background(bgImage));
-
-        // Right Pane: Form Area wrapped for centering
-        StackPane rightPane = new StackPane(formPane);
-        rightPane.setPrefWidth(495); // 55% of 900
-        HBox.setHgrow(rightPane, Priority.ALWAYS);
-        rightPane.setStyle(BG_COLOR);
-
-        hbox.getChildren().addAll(leftPane, rightPane);
-
-        Scene scene = new Scene(hbox, 900, 600);
-        return scene;
-    }
-
-    private VBox getLoginForm() {
-        VBox root = new VBox(15);
-        root.setAlignment(Pos.CENTER_LEFT);
-        root.setMaxWidth(350);
-        root.setPadding(new Insets(40));
-        root.setStyle(BG_COLOR);
-
-        Label title = new Label("Welcome back...");
-        title.setStyle(TEXT_White + " -fx-font-size: 28px; -fx-font-weight: bold;");
-        VBox.setMargin(title, new Insets(0, 0, 20, 0));
-
-        TextField emailField = new TextField();
-        emailField.setPromptText("username");
-        emailField.setStyle(FIELD_STYLE);
-
-        PasswordField passwordField = new PasswordField();
-        passwordField.setPromptText("*************");
-        passwordField.setStyle(FIELD_STYLE);
-
-        Label forgotPassword = new Label("forgot password");
-        forgotPassword.setStyle(LINK_STYLE);
-        
-        Button loginBtn = new Button("Login");
+        Button loginBtn = new Button("Sign In");
         loginBtn.setMaxWidth(Double.MAX_VALUE);
         loginBtn.setStyle(BTN_PRIMARY);
+        loginBtn.setOnMouseEntered(e -> loginBtn.setStyle(BTN_PRIMARY.replace(BLUE, BLUE_DRK)));
+        loginBtn.setOnMouseExited (e -> loginBtn.setStyle(BTN_PRIMARY));
 
-        // Logic
         loginBtn.setOnAction(e -> {
-            User user = userDAO.loginUser(emailField.getText(), passwordField.getText());
+            User user = userDAO.loginUser(emailField.getText(), passField.getText());
             if (user != null) {
                 SessionManager.getInstance().setCurrentUser(user);
-                Alert alert = new Alert(Alert.AlertType.INFORMATION, "Login Successful!");
-                alert.setHeaderText(null);
-                alert.showAndWait();
-                
-                if (user.getRole() == Role.ORGANIZATION) {
+                if (user.getRole() == Role.ORGANIZATION)
                     stage.setScene(new OrgDashboardScreen(stage).getScene());
-                } else {
+                else
                     stage.setScene(new UserDashboardScreen(stage).getScene());
-                }
             } else {
-                Alert err = new Alert(Alert.AlertType.ERROR, "Invalid Credentials");
-                err.setHeaderText(null);
-                err.show();
+                showError("Invalid email or password.");
             }
         });
 
-        // "OR" separator
-        HBox orBox = new HBox(10);
-        orBox.setAlignment(Pos.CENTER);
-        Line leftLine = new Line(0, 0, 80, 0); leftLine.setStroke(Color.web("#555555"));
-        Label orLabel = new Label("OR"); orLabel.setStyle(TEXT_White + " -fx-font-weight: bold;");
-        Line rightLine = new Line(0, 0, 80, 0); rightLine.setStroke(Color.web("#555555"));
-        orBox.getChildren().addAll(leftLine, orLabel, rightLine);
-        VBox.setMargin(orBox, new Insets(10, 0, 10, 0));
+        HBox divider = orDivider();
 
-        Button signupBtn = new Button("Sign up for an account");
+        Button signupBtn = new Button("Create an account");
         signupBtn.setMaxWidth(Double.MAX_VALUE);
-        signupBtn.setStyle(BTN_SECONDARY);
+        signupBtn.setStyle(BTN_OUTLINE);
+        signupBtn.setOnMouseEntered(e -> signupBtn.setStyle(BTN_OUTLINE + "-fx-background-color: #EFF6FF;"));
+        signupBtn.setOnMouseExited (e -> signupBtn.setStyle(BTN_OUTLINE));
         signupBtn.setOnAction(e -> stage.setScene(getRegisterScene()));
 
-        Label footer = new Label("Developed by Prathmesh Darvesh (Roll No: ECSB441)");
-        footer.setStyle("-fx-font-size: 10px; -fx-text-fill: #555555;");
-        VBox.setMargin(footer, new Insets(40, 0, 0, 0));
-
-        root.getChildren().addAll(title, emailField, passwordField, forgotPassword, loginBtn, orBox, signupBtn, footer);
-        return root;
+        form.getChildren().addAll(welcome, sub, emailField, passField, loginBtn, divider, signupBtn);
+        return form;
     }
 
-    private VBox getRegisterForm() {
-        VBox root = new VBox(15);
-        root.setAlignment(Pos.CENTER_LEFT);
-        root.setMaxWidth(350);
-        root.setPadding(new Insets(40));
-        root.setStyle(BG_COLOR);
+    // ── REGISTER ───────────────────────────────────────────────────
+    private VBox buildRegisterForm() {
+        VBox form = new VBox(14);
+        form.setAlignment(Pos.CENTER_LEFT);
+        form.setMaxWidth(380);
+        form.setPadding(new Insets(40, 40, 40, 40));
 
-        Label title = new Label("Create Account");
-        title.setStyle(TEXT_White + " -fx-font-size: 28px; -fx-font-weight: bold;");
-        VBox.setMargin(title, new Insets(0, 0, 10, 0));
+        Label title = new Label("Create account");
+        title.setStyle("-fx-text-fill: " + TEXT_PRI + "; -fx-font-size: 28px; -fx-font-weight: bold;");
 
-        TextField emailField = new TextField();
-        emailField.setPromptText("Email");
-        emailField.setStyle(FIELD_STYLE);
+        Label sub = new Label("Join the community today");
+        sub.setStyle("-fx-text-fill: " + TEXT_SEC + "; -fx-font-size: 14px;");
+        VBox.setMargin(sub, new Insets(0, 0, 6, 0));
 
-        PasswordField passwordField = new PasswordField();
-        passwordField.setPromptText("Password");
-        passwordField.setStyle(FIELD_STYLE);
-        
-        PasswordField confirmPassField = new PasswordField();
-        confirmPassField.setPromptText("Confirm Password");
-        confirmPassField.setStyle(FIELD_STYLE);
+        TextField emailF   = styledField("Email address");
+        PasswordField passF  = styledPass("Password");
+        PasswordField confF  = styledPass("Confirm password");
 
-        // Role Combobox styled
         ComboBox<Role> roleBox = new ComboBox<>();
         roleBox.getItems().addAll(Role.values());
         roleBox.setValue(Role.PARTICIPANT);
         roleBox.setMaxWidth(Double.MAX_VALUE);
-        roleBox.setStyle("-fx-background-color: #333333; -fx-background-radius: 20; -fx-padding: 5;");
-        // Quick visual fix for combo box popup (often looks ugly out of the box in dark mode, but keeping simple)
+        roleBox.setStyle(
+            "-fx-background-color: " + FIELD_BG + ";" +
+            "-fx-border-color: " + BORDER + ";" +
+            "-fx-border-radius: 10;" +
+            "-fx-background-radius: 10;" +
+            "-fx-padding: 6 10;" +
+            "-fx-font-size: 14px;");
 
-        TextField field1 = new TextField();
-        field1.setStyle(FIELD_STYLE);
-        TextField field2 = new TextField();
-        field2.setStyle(FIELD_STYLE);
-        
-        // Dynamic Fields toggle
+        TextField field1 = styledField("First Name");
+        TextField field2 = styledField("Last Name");
+
         roleBox.setOnAction(e -> {
             if (roleBox.getValue() == Role.ORGANIZATION) {
                 field1.setPromptText("Organization Name");
-                field2.setVisible(false);
-                field2.setManaged(false);
+                field2.setVisible(false); field2.setManaged(false);
             } else {
                 field1.setPromptText("First Name");
-                field2.setVisible(true);
-                field2.setManaged(true);
+                field2.setVisible(true);  field2.setManaged(true);
                 field2.setPromptText("Last Name");
             }
         });
         roleBox.getOnAction().handle(null);
 
-        Button registerBtn = new Button("Register");
+        Button registerBtn = new Button("Create Account");
         registerBtn.setMaxWidth(Double.MAX_VALUE);
         registerBtn.setStyle(BTN_PRIMARY);
+        registerBtn.setOnMouseEntered(e -> registerBtn.setStyle(BTN_PRIMARY.replace(BLUE, BLUE_DRK)));
+        registerBtn.setOnMouseExited (e -> registerBtn.setStyle(BTN_PRIMARY));
 
         registerBtn.setOnAction(e -> {
-            if (!passwordField.getText().equals(confirmPassField.getText())) {
-                new Alert(Alert.AlertType.ERROR, "Passwords do not match").show();
-                return;
-            }
-            if (emailField.getText().isEmpty() || passwordField.getText().isEmpty() || field1.getText().isEmpty()) {
-                new Alert(Alert.AlertType.ERROR, "Please fill all fields").show();
-                return;
-            }
+            if (!passF.getText().equals(confF.getText())) { showError("Passwords do not match."); return; }
+            if (emailF.getText().isBlank() || passF.getText().isBlank() || field1.getText().isBlank()) { showError("Please fill all required fields."); return; }
 
             Role role = roleBox.getValue();
-            boolean success = false;
-            
-            // Logic Constraint: Handled precisely by injecting specifically requested user role
-            if (role == Role.ORGANIZATION) {
-                success = userDAO.registerOrganization(emailField.getText(), passwordField.getText(), field1.getText());
-            } else if (role == Role.PARTICIPANT) {
-                success = userDAO.registerParticipant(emailField.getText(), passwordField.getText(), field1.getText(), field2.getText());
-            } else if (role == Role.VOLUNTEER) {
-                success = userDAO.registerVolunteer(emailField.getText(), passwordField.getText(), field1.getText(), field2.getText());
-            }
-
-            if (success) {
-                Alert a = new Alert(Alert.AlertType.INFORMATION, "Registration Successful! You can now login.");
-                a.setHeaderText(null);
-                a.showAndWait();
+            boolean ok = switch (role) {
+                case ORGANIZATION -> userDAO.registerOrganization(emailF.getText(), passF.getText(), field1.getText());
+                case PARTICIPANT  -> userDAO.registerParticipant(emailF.getText(),  passF.getText(), field1.getText(), field2.getText());
+                case VOLUNTEER    -> userDAO.registerVolunteer(emailF.getText(),    passF.getText(), field1.getText(), field2.getText());
+            };
+            if (ok) {
+                Alert a = new Alert(Alert.AlertType.INFORMATION, "Registration successful! Please sign in.");
+                a.setHeaderText(null); a.showAndWait();
                 stage.setScene(getLoginScene());
-            } else {
-                new Alert(Alert.AlertType.ERROR, "Registration Failed. Email might exist.").show();
-            }
+            } else showError("Registration failed. Email may already exist.");
         });
 
-        // "OR" separator
-        HBox orBox = new HBox(10);
-        orBox.setAlignment(Pos.CENTER);
-        Line leftLine = new Line(0, 0, 80, 0); leftLine.setStroke(Color.web("#555555"));
-        Label orLabel = new Label("OR"); orLabel.setStyle(TEXT_White + " -fx-font-weight: bold;");
-        Line rightLine = new Line(0, 0, 80, 0); rightLine.setStroke(Color.web("#555555"));
-        orBox.getChildren().addAll(leftLine, orLabel, rightLine);
-        VBox.setMargin(orBox, new Insets(10, 0, 10, 0));
+        Button loginLink = new Button("Already have an account? Sign in");
+        loginLink.setMaxWidth(Double.MAX_VALUE);
+        loginLink.setStyle(BTN_OUTLINE);
+        loginLink.setOnMouseEntered(e -> loginLink.setStyle(BTN_OUTLINE + "-fx-background-color: #EFF6FF;"));
+        loginLink.setOnMouseExited (e -> loginLink.setStyle(BTN_OUTLINE));
+        loginLink.setOnAction(e -> stage.setScene(getLoginScene()));
 
-        Button loginBtn = new Button("Already have an account? Login here");
-        loginBtn.setMaxWidth(Double.MAX_VALUE);
-        loginBtn.setStyle(BTN_SECONDARY);
-        loginBtn.setOnAction(e -> stage.setScene(getLoginScene()));
-        
-        Label footer = new Label("Developed by Prathmesh Darvesh (Roll No: ECSB441)");
-        footer.setStyle("-fx-font-size: 10px; -fx-text-fill: #555555;");
-        VBox.setMargin(footer, new Insets(10, 0, 0, 0));
+        form.getChildren().addAll(title, sub, emailF, passF, confF, roleBox, field1, field2, registerBtn, loginLink);
+        return form;
+    }
 
-        root.getChildren().addAll(
-            title, emailField, passwordField, confirmPassField, roleBox, field1, field2, 
-            registerBtn, orBox, loginBtn, footer
-        );
-        return root;
+    // ── Helpers ────────────────────────────────────────────────────
+    private TextField styledField(String prompt) {
+        TextField tf = new TextField();
+        tf.setPromptText(prompt);
+        tf.setStyle(FIELD_STYLE);
+        return tf;
+    }
+
+    private PasswordField styledPass(String prompt) {
+        PasswordField pf = new PasswordField();
+        pf.setPromptText(prompt);
+        pf.setStyle(FIELD_STYLE);
+        return pf;
+    }
+
+    private HBox orDivider() {
+        HBox row = new HBox(12);
+        row.setAlignment(Pos.CENTER);
+        VBox.setMargin(row, new Insets(4, 0, 4, 0));
+        Line l1 = new Line(0,0,100,0); l1.setStroke(Color.web(BORDER));
+        Line l2 = new Line(0,0,100,0); l2.setStroke(Color.web(BORDER));
+        Label or = new Label("or"); or.setStyle("-fx-text-fill: " + TEXT_SEC + "; -fx-font-size: 13px;");
+        row.getChildren().addAll(l1, or, l2);
+        return row;
+    }
+
+    private void showError(String msg) {
+        Alert a = new Alert(Alert.AlertType.ERROR, msg);
+        a.setHeaderText(null); a.show();
     }
 }
