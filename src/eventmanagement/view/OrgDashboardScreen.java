@@ -247,7 +247,11 @@ public class OrgDashboardScreen {
         for (EventDAO.EventRegistration reg : regs) {
             VBox card = new VBox(10); card.setStyle("-fx-background-color: " + WHITE + "; -fx-background-radius: 14; " + CARD_SHADOW + " -fx-padding: 20;");
             String sc = switch(reg.status){ case "ACCEPTED" -> GREEN; case "PENDING" -> "#D97706"; default -> RED_SOFT; };
-            Label pill = new Label(reg.role + "  ·  " + reg.status);
+            String statusStr = reg.status;
+            if ("ACCEPTED".equals(reg.status) && reg.hasEntered) {
+                statusStr += "  ·  ✓ ENTERED";
+            }
+            Label pill = new Label(reg.role + "  ·  " + statusStr);
             pill.setStyle("-fx-background-color: transparent; -fx-border-color:" + sc + "; -fx-border-radius: 10; -fx-text-fill: " + sc + "; -fx-font-size: 11px; -fx-font-weight: bold; -fx-padding: 3 10;");
             Label email = new Label(reg.email);
             email.setStyle("-fx-text-fill: " + TEXT_PRI + "; -fx-font-size: 15px; -fx-font-weight: bold;");

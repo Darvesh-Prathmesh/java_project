@@ -161,11 +161,12 @@ public class EventDAO {
         public String applicationText;
         public String status;
         public String ticketNumber;
+        public boolean hasEntered;
     }
 
     public List<EventRegistration> getRegistrationsForEvent(int eventId) {
         List<EventRegistration> list = new ArrayList<>();
-        String query = "SELECT r.registration_id, r.user_id, r.registration_role, r.application_text, r.status, r.ticket_number, u.email " +
+        String query = "SELECT r.registration_id, r.user_id, r.registration_role, r.application_text, r.status, r.ticket_number, r.has_entered, u.email " +
                        "FROM registrations r JOIN users u ON r.user_id = u.user_id WHERE r.event_id = ?";
         try (Connection conn = Database.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
@@ -179,11 +180,44 @@ public class EventDAO {
                 reg.applicationText = rs.getString("application_text");
                 reg.status = rs.getString("status");
                 reg.ticketNumber = rs.getString("ticket_number");
+                reg.hasEntered = rs.getBoolean("has_entered");
                 reg.email = rs.getString("email");
                 list.add(reg);
             }
         } catch (SQLException e) { e.printStackTrace(); }
         return list;
+    }
+
+    public EventRegistration getRegistrationByTicket(String ticketNumber) {
+        String query = "SELECT r.registration_id, r.user_id, r.registration_role, r.application_text, r.status, r.ticket_number, r.has_entered, u.email " +
+                       "FROM registrations r JOIN users u ON r.user_id = u.user_id WHERE r.ticket_number = ?";
+        try (Connection conn = Database.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setString(1, ticketNumber);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                EventRegistration reg = new EventRegistration();
+                reg.registrationId = rs.getInt("registration_id");
+                reg.userId = rs.getInt("user_id");
+                reg.role = rs.getString("registration_role");
+                reg.applicationText = rs.getString("application_text");
+                reg.status = rs.getString("status");
+                reg.ticketNumber = rs.getString("ticket_number");
+                reg.hasEntered = rs.getBoolean("has_entered");
+                reg.email = rs.getString("email");
+                return reg;
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return null;
+    }
+
+    public boolean markTicketAsUsed(int registrationId) {
+        String query = "UPDATE registrations SET has_entered = TRUE WHERE registration_id = ?";
+        try (Connection conn = Database.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setInt(1, registrationId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) { e.printStackTrace(); return false; }
     }
 
     public boolean updateRegistrationStatus(int registrationId, String status) {

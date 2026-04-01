@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS registrations (
     application_text TEXT,
     status VARCHAR(50) DEFAULT 'ACCEPTED',
     ticket_number VARCHAR(50),
+    has_entered BOOLEAN DEFAULT FALSE,
     UNIQUE KEY (event_id, user_id),
     FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE

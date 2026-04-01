@@ -65,23 +65,23 @@ INSERT INTO events (org_id, title, description, event_date, location, event_type
 
 -- ─── REGISTRATIONS ────────────────────────────────────────────
 -- Alice (participant, user_id=3) RSVPs for AI Summit and Beats Fest
-INSERT INTO registrations (event_id, user_id, registration_role, application_text, status, ticket_number) VALUES
-  (1, 3, 'PARTICIPANT', NULL, 'ACCEPTED', 'TKT-ALICE001'),
-  (4, 3, 'PARTICIPANT', NULL, 'ACCEPTED', 'TKT-ALICE002');
+INSERT INTO registrations (event_id, user_id, registration_role, application_text, status, ticket_number, has_entered) VALUES
+  (1, 3, 'PARTICIPANT', NULL, 'ACCEPTED', 'TKT-ALICE001', TRUE),
+  (4, 3, 'PARTICIPANT', NULL, 'ACCEPTED', 'TKT-ALICE002', FALSE);
 
 -- Bob (participant, user_id=4) RSVPs for Classical Night
-INSERT INTO registrations (event_id, user_id, registration_role, application_text, status, ticket_number) VALUES
-  (5, 4, 'PARTICIPANT', NULL, 'ACCEPTED', 'TKT-BOB0001');
+INSERT INTO registrations (event_id, user_id, registration_role, application_text, status, ticket_number, has_entered) VALUES
+  (5, 4, 'PARTICIPANT', NULL, 'ACCEPTED', 'TKT-BOB0001', FALSE);
 
 -- Charlie (volunteer, user_id=5) applies to volunteer for AI Summit (ACCEPTED) & Hackathon (PENDING)
-INSERT INTO registrations (event_id, user_id, registration_role, application_text, status, ticket_number) VALUES
-  (1, 5, 'VOLUNTEER', 'I have experience organizing college tech events and can assist with speaker coordination and crowd management.', 'ACCEPTED', 'TKT-CHARLIE1'),
-  (2, 5, 'VOLUNTEER', 'I am a competitive programmer and would love to help run the hackathon and assist participating teams.', 'PENDING', NULL);
+INSERT INTO registrations (event_id, user_id, registration_role, application_text, status, ticket_number, has_entered) VALUES
+  (1, 5, 'VOLUNTEER', 'I have experience organizing college tech events and can assist with speaker coordination and crowd management.', 'ACCEPTED', 'TKT-CHARLIE1', TRUE),
+  (2, 5, 'VOLUNTEER', 'I am a competitive programmer and would love to help run the hackathon and assist participating teams.', 'PENDING', NULL, FALSE);
 
 -- Diana (volunteer, user_id=6) applies to volunteer for Beats Fest (PENDING) & Classical Night (BLOCKED)
-INSERT INTO registrations (event_id, user_id, registration_role, application_text, status, ticket_number) VALUES
-  (4, 6, 'VOLUNTEER', 'I am a music lover with backstage coordination experience from college fests. Happy to help with stage and crowd.', 'PENDING', NULL),
-  (5, 6, 'VOLUNTEER', 'I have formal experience assisting at classical concerts and can help with seating coordination and ushering.', 'BLOCKED', NULL);
+INSERT INTO registrations (event_id, user_id, registration_role, application_text, status, ticket_number, has_entered) VALUES
+  (4, 6, 'VOLUNTEER', 'I am a music lover with backstage coordination experience from college fests. Happy to help with stage and crowd.', 'PENDING', NULL, FALSE),
+  (5, 6, 'VOLUNTEER', 'I have formal experience assisting at classical concerts and can help with seating coordination and ushering.', 'BLOCKED', NULL, FALSE);
 
 -- =============================================================
 --  SUMMARY OF DEMO ACCOUNTS (all password: password123)

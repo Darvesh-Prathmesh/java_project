@@ -92,6 +92,12 @@ public class UserDashboardScreen {
         browseBtn .setOnAction(e -> { activeView = "browse";   root.setLeft(buildSidebar()); showBrowseView(); });
         calBtn    .setOnAction(e -> { activeView = "calendar"; root.setLeft(buildSidebar()); showCalendarView(); });
         ticketsBtn.setOnAction(e -> { activeView = "tickets";  root.setLeft(buildSidebar()); showTicketsView(); });
+        
+        Button scannerBtn = null;
+        if (u.getRole() == Role.VOLUNTEER) {
+            scannerBtn = navBtn("QR Scanner", "scanner");
+            scannerBtn.setOnAction(e -> { activeView = "scanner"; root.setLeft(buildSidebar()); showScannerView(); });
+        }
 
         Region spacer = new Region(); VBox.setVgrow(spacer, Priority.ALWAYS);
 
@@ -105,7 +111,9 @@ public class UserDashboardScreen {
             "-fx-background-radius: 20; -fx-font-weight: bold; -fx-padding: 10; -fx-cursor: hand;");
         logoutBtn.setOnAction(e -> { SessionManager.getInstance().logout(); stage.setScene(new AuthScreen(stage).getLoginScene()); });
 
-        sb.getChildren().addAll(brand, roleTag, browseBtn, calBtn, ticketsBtn, spacer, footer, new Label(""), logoutBtn);
+        sb.getChildren().addAll(brand, roleTag, browseBtn, calBtn, ticketsBtn);
+        if (scannerBtn != null) sb.getChildren().add(scannerBtn);
+        sb.getChildren().addAll(spacer, footer, new Label(""), logoutBtn);
         return sb;
     }
 
@@ -413,6 +421,65 @@ public class UserDashboardScreen {
         sp.setStyle("-fx-background-color: transparent; -fx-background: " + APP_BG + "; -fx-border-color: " + APP_BG + ";");
         VBox.setVgrow(sp, Priority.ALWAYS);
         c.getChildren().add(sp); root.setCenter(c);
+    }
+
+    // ── Scanner View (Volunteers Only) ─────────────────────────────
+    private void showScannerView() {
+        VBox c = wrap("QR Scanner", "Scan participant tickets to check them into the event.");
+        
+        VBox scannerBox = new VBox(20);
+        scannerBox.setPadding(new Insets(40));
+        scannerBox.setAlignment(Pos.CENTER);
+        scannerBox.setStyle("-fx-background-color: " + WHITE + "; -fx-background-radius: 14; " + CARD_SHADOW + " -fx-max-width: 500;");
+        
+        Label inst = new Label("ENTER TICKET ID:");
+        inst.setStyle("-fx-text-fill: " + TEXT_SEC + "; -fx-font-size: 14px; -fx-font-weight: bold;");
+        
+        TextField tktInput = new TextField();
+        tktInput.setPromptText("e.g. TKT-ABCDEF12");
+        tktInput.setStyle(FIELD_STYLE + " -fx-font-size: 18px; -fx-alignment: center;");
+        tktInput.setPrefWidth(300);
+        
+        Button scanBtn = new Button("Verify & Check-In");
+        scanBtn.setStyle(BTN_PRIMARY + " -fx-font-size: 15px; -fx-padding: 12 30;");
+        
+        Label resultLbl = new Label("");
+        resultLbl.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-alignment: center;");
+        resultLbl.setWrapText(true);
+        
+        scanBtn.setOnAction(e -> {
+            String val = tktInput.getText().trim();
+            if (val.isEmpty()) return;
+            
+            EventDAO.EventRegistration reg = eventDAO.getRegistrationByTicket(val);
+            if (reg == null) {
+                resultLbl.setStyle("-fx-text-fill: " + RED_SOFT + "; -fx-font-size: 16px; -fx-font-weight: bold;");
+                resultLbl.setText("❌ INVALID TICKET\nNo matching record found.");
+            } else if (!"ACCEPTED".equals(reg.status)) {
+                resultLbl.setStyle("-fx-text-fill: " + RED_SOFT + "; -fx-font-size: 16px; -fx-font-weight: bold;");
+                resultLbl.setText("❌ REGISTRATION NOT ACCEPTED\nCurrent status: " + reg.status);
+            } else if (reg.hasEntered) {
+                resultLbl.setStyle("-fx-text-fill: " + RED_SOFT + "; -fx-font-size: 16px; -fx-font-weight: bold;");
+                resultLbl.setText("⚠️ TICKET ALREADY USED\nParticipant has already entered.");
+            } else {
+                boolean ok = eventDAO.markTicketAsUsed(reg.registrationId);
+                if (ok) {
+                    resultLbl.setStyle("-fx-text-fill: " + GREEN + "; -fx-font-size: 16px; -fx-font-weight: bold;");
+                    resultLbl.setText("✅ ENTRY APPROVED\nWelcome, " + reg.email + "!");
+                    tktInput.clear();
+                } else {
+                    resultLbl.setStyle("-fx-text-fill: " + RED_SOFT + "; -fx-font-size: 16px; -fx-font-weight: bold;");
+                    resultLbl.setText("Error updating database.");
+                }
+            }
+        });
+        
+        scannerBox.getChildren().addAll(inst, tktInput, scanBtn, resultLbl);
+        
+        c.getChildren().add(scannerBox);
+        c.setAlignment(Pos.TOP_LEFT);
+        
+        root.setCenter(c);
     }
 
     // ── Helpers ────────────────────────────────────────────────────
